@@ -1,11 +1,12 @@
 import pytest
 
-from azure.storage.blob import BlockBlobService
+from azure.storage.blob import BlobServiceClient, ContainerClient
 
 
 URL = "127.0.0.1:10000"
-USERNAME = "devstoreaccount1"
-KEY = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw=="
+ACCOUNT_NAME = "devstoreaccount1"
+ACCOUNT_KEY = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw=="
+CONNECTION_STRING = f"DefaultEndpointsProtocol=https;AccountName={ACCOUNT_NAME};AccountKey={ACCOUNT_KEY};EndpointSuffix=core.windows.net"
 data = b"0123456789"
 
 
@@ -29,17 +30,19 @@ def storage(host):
     """
     Create blob using azurite.
     """
-    bbs = BlockBlobService(
-        account_name=USERNAME,
-        account_key=KEY,
-        custom_domain=f"http://{host}/devstoreaccount1",
-    )
-    bbs.create_container("data", timeout=1)
+    account_url = f"https://{ACCOUNT_NAME}.blob.core.windows.net"
+    container_name = "data"
+    blob_service_client = BlobServiceClient.from_connection_string(CONNECTION_STRING)
+    blob_service_client.create_container(container_name, timeout=1)
 
-    bbs.create_blob_from_bytes("data", "top_file.txt", data)
-    bbs.create_blob_from_bytes("data", "root/rfile.txt", data)
-    bbs.create_blob_from_bytes("data", "root/a/file.txt", data)
-    bbs.create_blob_from_bytes("data", "root/b/file.txt", data)
-    bbs.create_blob_from_bytes("data", "root/c/file1.txt", data)
-    bbs.create_blob_from_bytes("data", "root/c/file2.txt", data)
-    yield bbs
+    container_client = ContainerClient(account_url=account_url,
+                                       container_name=container_name,
+                                       credential=ACCOUNT_KEY)
+
+    container_client.upload_blob("top_file.txt", data)
+    container_client.upload_blob("data", "root/rfile.txt", data)
+    container_client.upload_blob("data", "root/a/file.txt", data)
+    container_client.upload_blob("data", "root/b/file.txt", data)
+    container_client.upload_blob("data", "root/c/file1.txt", data)
+    container_client.upload_blob("data", "root/c/file2.txt", data)
+    yield container_client
